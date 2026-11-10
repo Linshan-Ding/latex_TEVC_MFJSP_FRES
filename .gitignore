@@ -1,0 +1,15 @@
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.xdv
+*.pdf
+*.png
+_pages/
+__pycache__/
+!figures/*.pdf
