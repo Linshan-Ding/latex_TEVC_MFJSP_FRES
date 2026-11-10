@@ -1,0 +1,64 @@
+% main.tex -- English manuscript (IEEE Transactions, IEEEtran journal, two columns). Compile: latexmk -xelatex main.tex
+% Sibling root main_zh.tex is the Chinese manuscript; both share macros/, tables/, figures/ and appendix/.
+\documentclass[journal,10pt]{IEEEtran}
+\newif\iflangzh\langzhfalse
+\newcommand{\bi}[2]{#2}            % shared files write \bi{中文}{English}; this root keeps the English
+\usepackage{fontspec}
+\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{TeX Gyre Termes}}
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage{booktabs,multirow,array,tabularx,threeparttable}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[hidelinks]{hyperref}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{conjecture}{Conjecture}
+\newif\ifanonymous
+\input{macros/placeholders}
+\input{macros/results}
+\input{frontmatter-authors}
+\begin{document}
+\title{Fluid-residual evolutionary search for multiplicity flexible job-shop scheduling}
+\ifanonymous
+\author{Anonymous authors}
+\else
+\author{\paperauthors}
+\fi
+\maketitle
+\draftnote{This is a pre-experiment manuscript skeleton. Sections~\ref{sec:problem} and~\ref{sec:method} are written out;
+the abstract, introduction, related work, experiments and conclusions are structured drafts whose claims are marked
+\pending{pending}. The abstract and the contribution list must be rewritten from \texttt{docs/claim-verdicts.md} after the
+experiments are judged; the manuscript must not be submitted in this state.}
+\begin{abstract}
+Multiplicity flexible job-shop scheduling (MFJSP) describes shops in which a few job types are produced in many identical
+copies, so that the search space grows with the number of copies while the copies themselves are interchangeable.
+Existing fluid-assisted evolutionary and reinforcement-learning methods use the fluid relaxation as an initialization, a
+state feature or a control signal, and do not say which part of the discrete difficulty the fluid model already explains.
+This paper decomposes the gap between the fluid lower bound and a feasible makespan exactly into a rounding loss, incurred
+when continuous quotas become integer quotas, and a sequencing residual under fixed integer quotas. A quota chromosome whose
+dimension does not grow with the number of copies, together with conservation-preserving quota transfers, carries the first
+term; a quotient-graph ranker that predicts only the sequencing residual, with an output that never violates the analytic
+lower bound, carries the second, and a safeguarded preselection that unites learned, fluid-heuristic and random candidates
+keeps every decision under exact decoding. \pending{On 59 fixed design instances crossing three structural factors, the
+Brandimarte benchmark and a multiplicity-extrapolation tier, the method reaches makespan gaps no worse than job-indexed
+genetic search, fluid-assisted evolutionary search and two learning-based baselines under the same wall-clock budget, with
+\OursDecodeReduction{} fewer exact decodings.} \pending{The empirical rounding gap decreases with the mean multiplicity as the
+theory predicts.}
+\end{abstract}
+\begin{IEEEkeywords}
+Multiplicity flexible job-shop scheduling, fluid relaxation, integer quota, candidate ranking, evolutionary search.
+\end{IEEEkeywords}
+\input{sections/en/1-introduction}
+\input{sections/en/2-related-work}
+\input{sections/en/3-problem}
+\input{sections/en/4-method}
+\input{sections/en/5-experiments}
+\input{sections/en/6-conclusion}
+\appendix[Notation and terminology]
+\input{appendix/glossary}
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+\end{document}

@@ -1,0 +1,29 @@
+% sections/zh/2-related-work.tex -- 按缺口组织；与英文稿同一张定位表。
+\section{相关工作}\label{sec:related}
+
+\subsection{多重度 FJSP 的流体辅助进化搜索}\label{sec:related-fluid}
+\pending{流体主从进化算法及其变体把多重度 FJSP 松弛为连续流体模型，用分流比例做初始化、调度规则或主种群的宏观指导\citeneed{流体主从进化算法（多重度 FJSP），2022，及其换模时间变体}。}这些工作证明流体比例携带有意义的分流结构，但流体解只是先验：搜索与学习组件仍面对完整的离散问题，表示也仍是 job-indexed。
+
+\subsection{流体模型与强化学习的结合}\label{sec:related-rl}
+\pending{以流体量作状态特征的多策略 PPO\citeneed{MPPPO，2024}、在线调节流体进化算法参数的 PPO\citeneed{DSLFMAE，2025}、把流体松弛送入双重 DQN 的动态多重度调度\citeneed{流体 + DDQN，2025}都把流体量当作特征或控制信号。}它们都没有分解差距的来源。\pending{一条并发工作研究副本数趋于无穷时流体解的精确可达性\citeneed{递归流体可达性，2026}}，与本文关注的有限、不均衡多重度区间互补。
+
+\subsection{改进式学习与候选筛选学习}\label{sec:related-improve}
+JSP 与 FJSP 的改进式深度强化学习让策略网络承担完整的改进决策并依赖信用分配\citeneed{L2S 类关键块改进策略，2024；FJSP 记忆增强改进启发式，2025}。监督式候选筛选，如 NeuroLKH 的候选边集与禁忌搜索的学习式移动筛选\citeneed{NeuroLKH；学习式禁忌移动筛选}，是本文排序器角色的方法论祖先，但未与基于松弛的分解结合。经典 FJSP 元启发式提供宿主组件：双层遗传编码\cite{pezzella2008genetic}、关键块禁忌搜索\cite{mastrolilli2000effective}，以及 Brandimarte\cite{brandimarte1993routing} 与 Hurink\cite{hurink1994tabu} 基准。
+
+\begin{table}
+\centering\small
+\caption{最接近工作与本文方法的差异。}\label{tab:related}
+\begin{tabularx}{\linewidth}{@{}>{\hsize=0.75\hsize}L>{\hsize=0.85\hsize}L>{\hsize=1.4\hsize}L@{}}
+\toprule
+\textbf{工作} & \textbf{范式} & \textbf{差异} \\
+\midrule
+流体主从进化算法 & 流体辅助进化 & 流体比例只作初始化与指导；表示为 job-indexed \\
+DSLFMAE & 流体进化 + PPO 控制 & 学习器调节进化算法参数而非候选质量 \\
+MPPPO & 流体特征 + DRL 构造 & 端到端构造，无搜索 \\
+L2S 类改进式 DRL & 改进式 DRL & 策略承担完整的改进决策 \\
+\textbf{本文} & \textbf{配额染色体上的进化 + 残差排序器} & \textbf{差距精确分解；学习器限定于残差；精确解码裁决} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+表 \ref{tab:related} 给出定位。所列工作都未把流体差距分成来源不同的两部分，也未把学习器限定在解析模型无法解释的那一部分，这正是本文瞄准的缺口。

@@ -1,0 +1,46 @@
+% sections/en/1-introduction.tex -- funnel: importance, state of the art, idea, contributions, outline.
+\section{Introduction}\label{sec:intro}
+
+The multiplicity flexible job-shop scheduling problem (MFJSP) describes a shop in which only a few job types are
+produced, each type in many copies that share one routing, one candidate machine set per operation and one processing
+time per machine. Electronics assembly, injection moulding and batch machining shops take this form: a planning window
+holds thousands of operations but only a dozen products. \pending{A planner issues one executable schedule per window;
+with job-indexed genetic search the solution quality degrades visibly as the number of copies doubles.} The difficulty is
+structural rather than one of size: interchangeable copies create many equivalent solutions under a job-indexed
+representation, and the loss incurred when continuous quotas are rounded to integers has a different origin from the loss
+incurred by sequencing under fixed quotas.
+
+\pending{Fluid relaxations of the MFJSP give meaningful flow ratios and lower bounds, and fluid-assisted evolutionary and
+reinforcement-learning methods have appeared steadily in recent years.} These methods treat the fluid solution as an
+initialization, a state feature or a control signal. They do not say which part of the discrete difficulty the fluid model
+already explains, so the learning component faces the whole improvement problem and has no non-learned candidates to fall
+back on when it fails out of distribution.
+
+This paper starts from an exact identity. The gap between the fluid lower bound and a feasible makespan is the sum of a
+rounding loss, which depends only on the integer quotas, and a sequencing residual, which depends on the order chosen
+under those quotas. The identity suggests a division of labour: an evolutionary search over a quota chromosome whose
+dimension is fixed by the type structure, a ranker that learns only the sequencing residual, and exact decoding as the sole
+arbiter of acceptance.
+
+\draftnote{The contribution list below is the expected list. Under the write-back discipline the final list is derived only
+from the claims judged as holding in \texttt{docs/claim-verdicts.md}; partially supported claims are narrowed to the evidence,
+and unsupported claims are removed.}
+
+The contributions are the following.
+\begin{enumerate}
+  \item A quota-compressed representation and its fluid--quota geometry (Section~\ref{sec:quota}): the genotype dimension does
+  not grow with the number of copies, quota transfers conserve the per-type totals, and the rounding loss of the
+  largest-remainder quota is bounded independently of the multiplicity (Proposition~\ref{prop:rounding}).
+  \item A residual-scoped quotient ranker (Section~\ref{sec:ranker}) that predicts only the sequencing residual, with labels
+  normalized by the fluid bound and an output that never undercuts the analytic lower bound.
+  \item A safeguarded preselection (Section~\ref{sec:safeguard}) uniting learned, fluid-heuristic and random candidates under
+  exact decoding, which is locally no worse than the heuristic alone (Proposition~\ref{prop:safeguard}) and is judged by a
+  falsifiable decoding-count threshold.
+  \item \pending{An experimental study on 59 fixed design instances, the Brandimarte benchmark and a multiplicity-extrapolation
+  tier, with factor-effect analysis of the rounding gap against its theoretical bound.}
+\end{enumerate}
+
+The rest of the paper is organized as follows. Section~\ref{sec:related} positions the work against fluid-assisted and
+learning-assisted scheduling. Section~\ref{sec:problem} states the problem, the fluid relaxation and the gap identity.
+Section~\ref{sec:method} presents the method and its structural properties. Section~\ref{sec:experiments} reports the
+experiments and Section~\ref{sec:conclusion} concludes.

@@ -1,0 +1,8 @@
+# Identity lives only here; make_submission.py writes it into frontmatter-authors.tex.
+anonymous: true
+title: "Fluid-residual evolutionary search for multiplicity flexible job-shop scheduling"
+venue: "IEEE Transactions on Evolutionary Computation"
+authors: []          # - {name: "", affiliation: "", email: "", corresponding: false}
+funding: ""
+repository: ""
+credit: ""

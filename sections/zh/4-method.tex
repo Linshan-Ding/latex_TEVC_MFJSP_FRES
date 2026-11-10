@@ -1,0 +1,121 @@
+% sections/zh/4-method.tex -- 框架、三个机制、算法、性质、预测；与英文稿逐段对应。
+\section{流体-残差进化搜索}\label{sec:method}
+
+\subsection{总体框架}\label{sec:framework}
+方法分四层（图 \ref{fig:framework}）。流体层对每个算例求解一次式 \eqref{eq:fluid-obj}--\eqref{eq:fluid-dom}，得到 $L^F$、$q^*$ 与 $\lambda^*$。配额层用 largest-remainder 取整把 $q^*$ 映射为整数配额 $\mathbf{n}^0$，构造初始种群，并由式 \eqref{eq:LQ}--\eqref{eq:decomp} 计算每个个体的 $g_Q$ 与 $g_S$。候选层对每个父代生成配额迁移与优先键动作的候选池 $\mathcal{A}$，取商图排序器、流体启发式与随机三源各自 top-$K$ 的并集。验证层对并集中的每个候选精确解码，按真实 makespan 选出子代并做精英选择。工作假设是：流体模型已经确定了负载与分流结构，整数配额只在有界的取整损失内偏离它（命题 \ref{prop:rounding}），剩余的自由度在排序残差；限定在该残差上的学习器面对更小、更可迁移的任务，而精确解码与保底并集把学习器失效的代价封顶（命题 \ref{prop:safeguard}）。
+
+\begin{figure}[htbp]
+\figplace{总体框架图：左侧流体层（配额型流体 LP，输出 $L^F$、$q^*$）与配额层（largest-remainder 取整 → 配额染色体 $(\mathbf{n}, \boldsymbol{\kappa})$；式 \eqref{eq:decomp} 的 $g_Q$ / $g_S$ 仪表）；中间候选层（配额迁移与优先键动作的候选池 → 排序器 / 流体启发式 / 随机三源 top-$K$ 并集，用颜色标出 C1 配额几何、C2 排序器、C3 保底并集）；右侧验证层（对称感知解码器 → 真实 $C_{\max}$ → $\mu+\lambda$ 精英选择）；回流箭头表示自举排序器训练标签的搜索轨迹}{无（示意图）}{opt-paper-scifig 路线 B（TikZ），双栏宽 17.8\,cm}{6cm}
+\caption{流体-残差进化搜索：流体层、配额层、候选层与验证层}\label{fig:framework}
+\end{figure}
+
+\subsection{配额压缩表示与流体-配额几何}\label{sec:quota}
+个体为 $\chi = (\mathbf{n}, \boldsymbol{\kappa})$：类型工序到机器的整数配额张量 $\mathbf{n}$，以及每个类型工序一个优先键 $\kappa_{rk}$。不为任何副本保留基因；副本在解码时展开，同类副本之间的对称性由此消除。
+
+\paragraph{对称感知事件解码器} 解码器按时间推进。机器 $i$ 空闲时，它考察满足 $n_{rki} > 0$ 且至少有一个副本已完成第 $k-1$ 道工序的类型工序 $(r,k)$，按优先键选出最优的一类，再从该类型满足条件的副本中选最早可释放者。开工时刻取该副本前序完工与机器就绪的较大者，配额 $n_{rki}$ 减一。
+
+\begin{theorem}[解码器正确性]\label{thm:decoder}
+设 $\mathbf{n}$ 为非负整数张量，$i \notin M_{rk}$ 时 $n_{rki} = 0$ 且 $\sum_i n_{rki} = N_r$，$\boldsymbol{\kappa}$ 任意。则 (i) 事件解码器恰在 $\sum_r N_r K_r$ 次放置后终止，输出满足式 \eqref{eq:assign}--\eqref{eq:dom} 的调度；(ii) 当 $N_r = 1$ 对所有 $r$ 成立时，$\mathbf{n}$ 是机器分配向量，$\boldsymbol{\kappa}$ 诱导工序排列，解码器即标准 FJSP 的主动解码器。
+\end{theorem}
+\begin{proof}
+(i) 只在“$(r,k)$ 在机器 $i$ 上尚有配额且某副本的前序已完成”时放置一道副本工序，每次放置使一个配额减一、一个副本前进一道工序。配额总和为 $\sum_r N_r K_r$，故解码器恰在这么多次放置后停止，且每道副本工序恰得到一台候选机器，即式 \eqref{eq:assign}。开工时刻不早于前序完工，即式 \eqref{eq:prec}；同机工序按放置顺序追加且互不重叠，取 $y$ 为该顺序即满足式 \eqref{eq:disj}；式 \eqref{eq:cmax} 与 \eqref{eq:dom} 按构造成立。非终止状态总存在可放置项：每个未完成副本的首道未完成工序的前序已完成，而该类型工序的剩余配额等于尚未执行它的副本数，故必有某台机器的配额为正。(ii) $N_r = 1$ 时 $n_{rki} \in \{0,1\}$ 且每个 $(r,k)$ 恰一个单位，即机器分配向量；副本的选择平凡，解码器按优先键在就绪工序中选择并以最早可行时刻开工，即主动解码。
+\end{proof}
+
+\paragraph{流体-配额几何} 流体解通过两条路径进入搜索。初始化时 largest-remainder 取整把 $q^*$ 映射为 $\mathbf{n}^0$；搜索中配额迁移把 $n_{rk\cdot}$ 的 $b$ 个单位从配额超过 $q^*_{rki}$ 的机器移到配额不足的机器，平局随机打破，于是 $\sum_i n_{rki} = N_r$ 守恒，$L^Q$ 由式 \eqref{eq:LQ} 增量更新。与流体辅助进化算法不同，流体解定义的是表示的坐标系与动作的方向而不只是初始化；与 job-indexed 编码不同，基因型维度不含 $N_r$。
+
+\begin{proposition}[取整界]\label{prop:rounding}
+设 $q^*$ 为式 \eqref{eq:fluid-obj}--\eqref{eq:fluid-dom} 的最优解，$\mathbf{n}^0$ 为对每个 $q^*_{rk\cdot}$ 按 largest-remainder 法取整的配额，$B_i = \sum_{(r,k):\, i \in M_{rk}} p_{rki}$，$\bar B = \max_i B_i$。则 $0 \le L^Q(\mathbf{n}^0) - L^F \le \bar B$，且 $\bar B$ 不依赖任何 $N_r$。
+\end{proposition}
+\begin{proof}
+下界即命题 \ref{prop:decomp}。largest-remainder 取整保持 $\sum_i n^0_{rki} = N_r$ 且 $\lvert n^0_{rki} - q^*_{rki}\rvert < 1$。对机器 $i$，由式 \eqref{eq:fluid-load}，$\sum_{r,k} p_{rki} n^0_{rki} < \sum_{r,k} p_{rki} q^*_{rki} + \sum_{(r,k):\, i \in M_{rk}} p_{rki} \le L^F + B_i$；又由式 \eqref{eq:fluid-dom}，$\max_r \ell_r^{\min} \le L^F$。代入式 \eqref{eq:LQ} 得 $L^Q(\mathbf{n}^0) \le L^F + \bar B$。每个 $B_i$ 只对类型工序求和。
+\end{proof}
+
+\begin{proposition}[商图维度]\label{prop:dims}
+配额染色体有 $\sum_r K_r \lvert M_{rk}\rvert + \sum_r K_r$ 个分量；商图有 $\sum_r K_r + \lvert M\rvert$ 个节点、$\sum_r (K_r - 1) + \sum_r K_r \lvert M_{rk}\rvert$ 条边；三者都不依赖 $N_r$。job-indexed 双层编码有 $2\sum_r N_r K_r$ 个分量。
+\end{proposition}
+\begin{proof}
+按定义计数：每个 $i \in M_{rk}$ 的 $(r,k,i)$ 一个整数，每个 $(r,k)$ 一个优先键；商图节点为类型工序与机器，边为同类型相邻工序对与类型工序-候选机器对。job-indexed 编码为每道副本工序各保留一个机器基因与一个序列位置。
+\end{proof}
+
+\subsection{残差限定的商图排序器}\label{sec:ranker}
+排序器在命题 \ref{prop:dims} 的商图上工作。类型工序节点携带 $N_r$、$K_r$、$q^*_{rki}/N_r$、$n_{rki}/N_r$、配额超额量、加工时长统计、当前关键性与优先键统计；机器节点携带 $\lambda^*_i$、流体与配额负载占比，以及解码器中观测到的空闲占比与关键负载占比；全局特征为 $g_Q$、$g_S$、$L^Q/L^F$、$\bar N$ 与 $V_N$。对候选动作 $a$，网络由其涉及节点的嵌入与动作类型形成候选嵌入，输出 $\hat z_a$ 并经
+\begin{equation}
+\hat G_S(a) = L^F \operatorname{softplus}(\hat z_a) \label{eq:softplus}
+\end{equation}
+映射，使预测的子代 makespan $L^Q(\mathbf{n}_a) + \hat G_S(a) \ge L^F$ 不低于解析下界。标签 $y_a = G_S(T_a\chi)/L^F$ 由无排序器的宿主 FRES-lite 的搜索轨迹上精确解码得到，损失为同一父代内的 pairwise logistic 排序损失。排序器既不选择也不接受动作，不需要强化学习的信用分配；与通用 move ranker 不同，它的标签、特征与输出都限定在式 \eqref{eq:decomp} 的第二项上，解析已知的 $L^Q(\mathbf{n}_a)$ 不再学习。
+
+\subsection{保底预选}\label{sec:safeguard}
+每个父代的候选池 $\mathcal{A}$ 中配额迁移与优先键动作（关键块交换、关键工序插入与键扰动）各约一半。只对一个小子集精确解码：
+\begin{equation}
+\mathcal{A}_{\mathrm{eval}} = \operatorname{Top}_{K_L}\bigl(\hat G_S\bigr) \cup \operatorname{Top}_{K_H}(\text{流体启发式}) \cup \operatorname{Rand}_{K_R}, \label{eq:union}
+\end{equation}
+其中流体启发式按 $\sum_i \lvert n_{rki} - q^*_{rki}\rvert$ 的减少量给配额迁移打分，按所涉工序是否在关键块中给键动作打分。子代取解码后 makespan 最小的候选。
+
+\begin{proposition}[保底局部不劣]\label{prop:safeguard}
+设 $\mathcal{A}_H \subseteq \mathcal{A}$ 为启发式候选集，$\mathcal{A}_{\mathrm{eval}} = \mathcal{A}_L \cup \mathcal{A}_H \cup \mathcal{A}_R$，全部精确解码。则 $\min_{a \in \mathcal{A}_{\mathrm{eval}}} C_{\max}(T_a\chi) \le \min_{a \in \mathcal{A}_H} C_{\max}(T_a\chi)$。
+\end{proposition}
+\begin{proof}
+$\mathcal{A}_H \subseteq \mathcal{A}_{\mathrm{eval}}$，最小值在集合包含下单调不增。该陈述不涉及排序器的推断开销，墙钟上的优势是实验主张（第 \ref{sec:ablation} 节）。
+\end{proof}
+
+\subsection{算法、训练与一致性}\label{sec:algorithm}
+算法 \ref{alg:fres} 为宿主搜索；算法 \ref{alg:train} 在按算例参数表随机构造的算例上离线训练排序器并冻结，因此每个评测算例都是零样本求解。
+
+\begin{algorithm}[htbp]
+\caption{FRES：流体-残差进化搜索}\label{alg:fres}
+\begin{algorithmic}[1]
+\Require 算例；种群 $\mu$、子代 $\lambda$；候选池大小 $B$；$K_L, K_H, K_R$；配额步长 $b$；排序器 $f$（FRES-lite 无）；墙钟预算 $T$
+\Ensure 最优解码调度
+\State 求解式 \eqref{eq:fluid-obj}--\eqref{eq:fluid-dom}：$L^F, q^*, \lambda^*$；$\mathbf{n}^0 \gets$ $q^*$ 的 largest-remainder 取整
+\State $P \gets \mu$ 个个体（$\mathbf{n}^0$ 加随机迁移，$\boldsymbol{\kappa}$ 随机）；逐个解码，记录 $C_{\max}, G_Q, G_S$
+\While{已用时间 $< T$}
+  \For{$t = 1$ \textbf{to} $\lambda$}
+    \State $\chi \gets$ 从 $P$ 锦标赛选出的父代
+    \State $\mathcal{A} \gets$ $B$ 个候选的池：配额迁移（超额机器 $\to$ 欠额机器，步长 $b$）与优先键动作
+    \State $\mathcal{A}_H \gets$ 按流体启发式取 $\mathcal{A}$ 的 $\operatorname{Top}_{K_H}$；若给定 $f$，$\mathcal{A}_L \gets$ 按 $L^Q(\mathbf{n}_a) + f(a)$ 取 $\operatorname{Top}_{K_L}$，否则 $\emptyset$；$\mathcal{A}_R \gets$ 其余候选中的 $\operatorname{Rand}_{K_R}$
+    \ForAll{$a \in \mathcal{A}_L \cup \mathcal{A}_H \cup \mathcal{A}_R$}
+      \State 精确解码 $T_a\chi$；记录 $C_{\max}$ 与 $G_S$（收集标签时记录 $(\chi, a, G_S/L^F)$）
+    \EndFor
+    \State 把 $\arg\min_a C_{\max}(T_a\chi)$ 加入子代集合
+  \EndFor
+  \State $P \gets$ 按 $C_{\max}$ 的 $\mu+\lambda$ 精英选择，附多样性救援比例
+\EndWhile
+\State \Return $P$ 中的最优个体
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[htbp]
+\caption{残差排序器的离线训练}\label{alg:train}
+\begin{algorithmic}[1]
+\Require 算例参数表；epoch 数 $E$；每 epoch 算例数 $n_e$；学习率；验证集
+\Ensure 冻结的排序器 $f$
+\For{$e = 1$ \textbf{to} $E$}
+  \State 随机构造 $n_e$ 个算例；运行不带 $f$ 的算法 \ref{alg:fres}（FRES-lite），记录三元组 $(\chi, a, G_S(T_a\chi)/L^F)$
+  \State 构建商图；用同一父代内候选对的 pairwise logistic 排序损失更新 $f$
+  \State 用当前 $f$ 的完整 FRES 在验证集上评测；保留最优检查点；平台期早停
+\EndFor
+\State \Return 最优检查点
+\end{algorithmic}
+\end{algorithm}
+
+\begin{proposition}[学习目标与模型目标一致]\label{prop:consistency}
+设 $\mathbf{n}_a$ 为子代 $T_a\chi$ 的配额（迁移动作确定性地改写配额，键动作保持配额不变，故 $\mathbf{n}_a$ 无需解码即可得到）。若 $\hat G_S(a) = G_S(T_a\chi)$ 对所有 $a \in \mathcal{A}$ 成立，则候选按 $L^Q(\mathbf{n}_a) + \hat G_S(a)$ 的排序与按真实 $C_{\max}(T_a\chi)$ 的排序一致；以 $G_S(T_a\chi)/L^F$ 为标签的 pairwise 排序损失在同一父代内取零当且仅当预测保持 $G_S$ 的序。
+\end{proposition}
+\begin{proof}
+对 $T_a\chi$ 应用命题 \ref{prop:decomp}，$C_{\max}(T_a\chi) = L^F + G_Q(T_a\chi) + G_S(T_a\chi) = L^Q(\mathbf{n}_a) + G_S(T_a\chi)$。预测精确时两种排序键逐项相等。同一父代内 $L^F$ 为正常数，除以它不改变序，而 pairwise 损失只惩罚序被反转的候选对。
+\end{proof}
+
+\paragraph{复杂度} 流体 LP 有 $\sum_r K_r \lvert M_{rk}\rvert + 1$ 个变量，只求解一次。每机器一个堆时一次解码的代价为 $O(\sum_r N_r K_r \log m)$；每代花费 $\lambda (K_L + K_H + K_R)$ 次解码，外加排序器对 $\lambda B$ 个候选的一次批量前向，其图规模由命题 \ref{prop:dims} 给出。job-indexed 宿主把同样的解码次数花在大小为 $2\sum_r N_r K_r$ 的基因型上。
+
+\subsection{待实验检验的预测}\label{sec:predictions}
+性能论断不写成定理，而是写成猜想并附证伪条件。
+
+\begin{conjecture}[取整差距的符号]\label{conj:rounding}
+在第 \ref{sec:settings} 节的算例分布下，实证的相对取整差距 $G_Q(\mathbf{n}^0)/L^F$ 随 $\bar N$ 增大而减小、随 $V_p$ 增大而增大。
+\end{conjecture}
+命题 \ref{prop:rounding} 的界为 $\bar B/L^F$；$L^F$ 随 $\bar N$ 近似线性增长而 $\bar B$ 不变，$V_p$ 增大时 $B_i$ 中的大项与流体分流偏爱的小项分离。曲线在 $\bar N$ 上不单调或在 $V_p$ 上符号反转即推翻本猜想。
+
+\begin{conjecture}[增益的符号]\label{conj:gain}
+在主实验档，FRES 相对最强基线的 gap 增益随 $\bar N$ 与 $F$ 增大、随 $V_N$ 增大而减小。
+\end{conjecture}
+$\bar N$ 增大时 job-indexed 表示的对称冗余增大而配额表示不变（命题 \ref{prop:dims}）；$F$ 增大时配额自由度与流体分流的信息量增大；$V_N$ 增大时稀有类型相对其流体质量的取整损失更大。任一符号反转即推翻本猜想，并在第 \ref{sec:factor} 节如实报告。

@@ -1,0 +1,197 @@
+% sections/en/4-method.tex -- framework, three mechanisms, algorithm, properties, predictions.
+\section{Fluid-residual evolutionary search}\label{sec:method}
+
+\subsection{Overall framework}\label{sec:framework}
+The method has four layers (Fig.~\ref{fig:framework}). The fluid layer solves \eqref{eq:fluid-obj}--\eqref{eq:fluid-dom}
+once per instance and returns $L^F$, $q^*$ and $\lambda^*$. The quota layer rounds $q^*$ to the integer quota
+$\mathbf{n}^0$ by the largest-remainder rule, builds the initial population and evaluates $g_Q$ and $g_S$ of every
+individual through \eqref{eq:LQ}--\eqref{eq:decomp}. The candidate layer generates, for each parent, a pool $\mathcal{A}$ of
+quota transfers and priority-key moves and takes the union of the top-$K$ sets of a quotient-graph ranker, a fluid heuristic
+and a random draw. The verification layer decodes every candidate of the union exactly, selects the offspring by the true
+makespan and applies elitist selection. The working hypothesis is that the fluid model already fixes the load and flow
+structure, that integer quotas deviate from it only within a bounded rounding loss (Proposition~\ref{prop:rounding}), and
+that the remaining freedom lies in the sequencing residual; a learner scoped to that residual faces a smaller and more
+transferable task, while exact decoding and the safeguarded union cap the cost of a failing learner
+(Proposition~\ref{prop:safeguard}).
+
+\begin{figure*}
+\figplace{Framework: left, fluid layer (quota-type fluid LP, outputs $L^F$, $q^*$) and quota layer (largest-remainder rounding to the quota chromosome $(\mathbf{n}, \boldsymbol{\kappa})$; gauges $g_Q$ / $g_S$ from \eqref{eq:decomp}); middle, candidate layer (pool of quota transfers and priority-key moves, top-$K$ union of ranker / fluid heuristic / random, coloured by contribution C1 quota geometry, C2 ranker, C3 safeguarded union); right, verification layer (symmetry-aware decoder, true $C_{\max}$, $\mu+\lambda$ elitist selection); a return arrow marks the search trajectories that bootstrap the ranker's training labels}{none (conceptual)}{opt-paper-scifig route B (TikZ), two-column width 17.8\,cm}{6cm}
+\caption{Fluid-residual evolutionary search: fluid, quota, candidate and verification layers.}\label{fig:framework}
+\end{figure*}
+
+\subsection{Quota-compressed representation and fluid--quota geometry}\label{sec:quota}
+An individual is $\chi = (\mathbf{n}, \boldsymbol{\kappa})$: the integer quota tensor $\mathbf{n}$ of type-operations to
+machines and one priority key $\kappa_{rk}$ per type-operation. No gene is kept per copy; copies are expanded at decoding
+time, which removes the symmetry among identical copies.
+
+\paragraph{Symmetry-aware event decoder} The decoder advances in time. When a machine $i$ becomes idle, it considers the
+type-operations $(r,k)$ with $n_{rki} > 0$ that have at least one copy whose operation $k-1$ is complete, picks the one
+with the best priority key, and among the eligible copies of that type picks the earliest releasable one. The start time
+is the maximum of the copy's predecessor completion and the machine's ready time; the quota $n_{rki}$ is decremented.
+
+\begin{theorem}[Decoder correctness]\label{thm:decoder}
+Let $\mathbf{n}$ be a non-negative integer tensor with $n_{rki} = 0$ for $i \notin M_{rk}$ and $\sum_i n_{rki} = N_r$, and let
+$\boldsymbol{\kappa}$ be arbitrary. Then (i) the event decoder terminates after exactly $\sum_r N_r K_r$ placements and
+returns a schedule satisfying \eqref{eq:assign}--\eqref{eq:dom}; (ii) if $N_r = 1$ for all $r$, then $\mathbf{n}$ is a
+machine-assignment vector, $\boldsymbol{\kappa}$ induces an operation permutation and the decoder is the active decoder of
+the standard FJSP.
+\end{theorem}
+\begin{proof}
+(i) A placement puts one copy-operation on machine $i$ only if $(r,k)$ still has quota on $i$ and some copy has its
+predecessor complete; each placement decrements one quota and advances one copy by one operation. The quotas sum to
+$\sum_r N_r K_r$, so the decoder stops after that many placements, and every copy-operation receives exactly one
+candidate machine, which is \eqref{eq:assign}. The start time is at least the predecessor's completion, which is
+\eqref{eq:prec}; operations on a machine are appended in placement order and do not overlap, so \eqref{eq:disj} holds with
+$y$ equal to that order; \eqref{eq:cmax} and \eqref{eq:dom} hold by construction. A non-terminal state always admits a
+placement: for every unfinished copy the first unfinished operation has its predecessor complete, and the remaining quota of
+that type-operation equals the number of copies that have not yet performed it, so some machine holds a positive quota.
+(ii) With $N_r = 1$, $n_{rki} \in \{0,1\}$ with exactly one unit per $(r,k)$, which is a machine-assignment vector; the
+choice among copies is trivial, so the decoder selects among ready operations by priority key and starts each at the
+earliest feasible time, which is active decoding.
+\end{proof}
+
+\paragraph{Fluid--quota geometry} The fluid solution enters the search in two ways. At initialization the
+largest-remainder rule maps $q^*$ to $\mathbf{n}^0$; during the search a quota transfer moves $b$ units of $n_{rk\cdot}$
+from a machine whose quota exceeds $q^*_{rki}$ to a machine whose quota falls short of it, ties broken at random, so that
+$\sum_i n_{rki} = N_r$ is conserved and $L^Q$ is updated incrementally through \eqref{eq:LQ}. Unlike fluid-assisted
+evolutionary algorithms, the fluid solution defines the coordinate system of the representation and the direction of
+the moves rather than an initialization; unlike the job-indexed encoding, the genotype dimension does not contain $N_r$.
+
+\begin{proposition}[Rounding bound]\label{prop:rounding}
+Let $q^*$ be optimal for \eqref{eq:fluid-obj}--\eqref{eq:fluid-dom}, let $\mathbf{n}^0$ round each $q^*_{rk\cdot}$ by the
+largest-remainder rule, and let $B_i = \sum_{(r,k):\, i \in M_{rk}} p_{rki}$ and $\bar B = \max_i B_i$. Then
+$0 \le L^Q(\mathbf{n}^0) - L^F \le \bar B$, and $\bar B$ does not depend on any $N_r$.
+\end{proposition}
+\begin{proof}
+The lower bound is Proposition~\ref{prop:decomp}. Largest-remainder rounding keeps $\sum_i n^0_{rki} = N_r$ and
+$\lvert n^0_{rki} - q^*_{rki}\rvert < 1$. For machine $i$,
+$\sum_{r,k} p_{rki} n^0_{rki} < \sum_{r,k} p_{rki} q^*_{rki} + \sum_{(r,k):\, i \in M_{rk}} p_{rki} \le L^F + B_i$ by
+\eqref{eq:fluid-load}; also $\max_r \ell_r^{\min} \le L^F$ by \eqref{eq:fluid-dom}. Substituting into \eqref{eq:LQ}
+gives $L^Q(\mathbf{n}^0) \le L^F + \bar B$. Each $B_i$ sums over type-operations only.
+\end{proof}
+
+\begin{proposition}[Quotient dimension]\label{prop:dims}
+The quota chromosome has $\sum_r K_r \lvert M_{rk}\rvert + \sum_r K_r$ components; the quotient graph has
+$\sum_r K_r + \lvert M\rvert$ nodes and $\sum_r (K_r - 1) + \sum_r K_r \lvert M_{rk}\rvert$ edges; none depends on $N_r$.
+The job-indexed two-layer encoding has $2\sum_r N_r K_r$ components.
+\end{proposition}
+\begin{proof}
+Count the definitions: one integer per $(r,k,i)$ with $i \in M_{rk}$ and one key per $(r,k)$; quotient nodes are
+type-operations and machines, edges are consecutive type-operations of a type and type-operation--candidate pairs. The
+job-indexed encoding keeps one machine gene and one sequence position per copy-operation.
+\end{proof}
+
+\subsection{Residual-scoped quotient ranker}\label{sec:ranker}
+The ranker works on the quotient graph of Proposition~\ref{prop:dims}. Type-operation nodes carry $N_r$, $K_r$,
+$q^*_{rki}/N_r$, $n_{rki}/N_r$, the quota excess, processing-time statistics, current criticality and priority-key
+statistics; machine nodes carry $\lambda^*_i$, the fluid and quota load shares and the idle and critical-load shares
+observed in the decoder; global features are $g_Q$, $g_S$, $L^Q/L^F$, $\bar N$ and $V_N$. For a candidate action $a$ the
+network forms a candidate embedding from the embeddings of the nodes it touches and the action type, outputs $\hat z_a$
+and maps it through
+\begin{equation}
+\hat G_S(a) = L^F \operatorname{softplus}(\hat z_a), \label{eq:softplus}
+\end{equation}
+so that the predicted offspring makespan $L^Q(\mathbf{n}_a) + \hat G_S(a) \ge L^F$ never undercuts the analytic bound.
+Labels $y_a = G_S(T_a\chi)/L^F$ are produced by exact decoding along the search trajectories of FRES-lite, the host without
+the ranker, and the loss is pairwise logistic ranking within each parent. The ranker neither selects nor accepts actions
+and needs no reinforcement-learning credit assignment; unlike a generic move ranker, its labels, features and output are
+confined to the second term of \eqref{eq:decomp}, and the analytically known $L^Q(\mathbf{n}_a)$ is not learned.
+
+\subsection{Safeguarded preselection}\label{sec:safeguard}
+Each parent's pool $\mathcal{A}$ holds roughly equal numbers of quota transfers and priority-key moves (critical-block swaps,
+critical-operation insertions and key perturbations). Only a small subset is decoded exactly:
+\begin{equation}
+\mathcal{A}_{\mathrm{eval}} = \operatorname{Top}_{K_L}\bigl(\hat G_S\bigr) \cup \operatorname{Top}_{K_H}(\text{fluid heuristic}) \cup \operatorname{Rand}_{K_R}, \label{eq:union}
+\end{equation}
+where the fluid heuristic scores a quota transfer by the reduction of $\sum_i \lvert n_{rki} - q^*_{rki}\rvert$ and a key
+move by the critical-block membership of the operation it touches. The offspring is the candidate with the smallest decoded
+makespan.
+
+\begin{proposition}[Local non-inferiority of the safeguard]\label{prop:safeguard}
+Let $\mathcal{A}_H \subseteq \mathcal{A}$ be the heuristic candidates and $\mathcal{A}_{\mathrm{eval}} = \mathcal{A}_L \cup
+\mathcal{A}_H \cup \mathcal{A}_R$, all decoded exactly. Then
+$\min_{a \in \mathcal{A}_{\mathrm{eval}}} C_{\max}(T_a\chi) \le \min_{a \in \mathcal{A}_H} C_{\max}(T_a\chi)$.
+\end{proposition}
+\begin{proof}
+$\mathcal{A}_H \subseteq \mathcal{A}_{\mathrm{eval}}$ and a minimum is monotone under set inclusion. The statement does not
+cover the ranker's inference cost; the wall-clock advantage is an experimental claim (Section~\ref{sec:ablation}).
+\end{proof}
+
+\subsection{Algorithm, training and consistency}\label{sec:algorithm}
+Algorithm~\ref{alg:fres} is the host search; Algorithm~\ref{alg:train} trains the ranker offline on random instances drawn
+from the instance parameter table and freezes it, so that every evaluation instance is solved zero-shot.
+
+\begin{algorithm}
+\caption{FRES: fluid-residual evolutionary search}\label{alg:fres}
+\begin{algorithmic}[1]
+\Require instance; population $\mu$, offspring $\lambda$; pool size $B$; $K_L, K_H, K_R$; quota step $b$; ranker $f$ (absent in FRES-lite); wall budget $T$
+\Ensure best decoded schedule
+\State solve \eqref{eq:fluid-obj}--\eqref{eq:fluid-dom}: $L^F, q^*, \lambda^*$; $\mathbf{n}^0 \gets$ largest-remainder rounding of $q^*$
+\State $P \gets \mu$ individuals $(\mathbf{n}^0 \text{ with random transfers}, \boldsymbol{\kappa} \text{ random})$; decode each, record $C_{\max}, G_Q, G_S$
+\While{elapsed time $< T$}
+  \For{$t = 1$ \textbf{to} $\lambda$}
+    \State $\chi \gets$ tournament parent from $P$
+    \State $\mathcal{A} \gets$ pool of $B$ candidates: quota transfers (over-quota $\to$ under-quota machine, step $b$) and priority-key moves
+    \State $\mathcal{A}_H \gets \operatorname{Top}_{K_H}$ of $\mathcal{A}$ by the fluid heuristic; $\mathcal{A}_L \gets \operatorname{Top}_{K_L}$ by $L^Q(\mathbf{n}_a) + f(a)$ if $f$ is given, else $\emptyset$; $\mathcal{A}_R \gets \operatorname{Rand}_{K_R}$ of the rest
+    \ForAll{$a \in \mathcal{A}_L \cup \mathcal{A}_H \cup \mathcal{A}_R$}
+      \State decode $T_a\chi$ exactly; record $C_{\max}$ and $G_S$ (and log $(\chi, a, G_S/L^F)$ when collecting labels)
+    \EndFor
+    \State add $\arg\min_a C_{\max}(T_a\chi)$ to the offspring set
+  \EndFor
+  \State $P \gets \mu+\lambda$ elitist selection by $C_{\max}$ with a diversity-rescue fraction
+\EndWhile
+\State \Return best individual of $P$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Offline training of the residual ranker}\label{alg:train}
+\begin{algorithmic}[1]
+\Require instance parameter table; epochs $E$; instances per epoch $n_e$; learning rate; validation set
+\Ensure frozen ranker $f$
+\For{$e = 1$ \textbf{to} $E$}
+  \State draw $n_e$ random instances; run Algorithm~\ref{alg:fres} without $f$ (FRES-lite) and log $(\chi, a, G_S(T_a\chi)/L^F)$ triples
+  \State build the quotient graphs; update $f$ by pairwise logistic ranking loss over candidate pairs of the same parent
+  \State evaluate full FRES with the current $f$ on the validation set; keep the best checkpoint; stop on plateau
+\EndFor
+\State \Return best checkpoint
+\end{algorithmic}
+\end{algorithm}
+
+\begin{proposition}[Consistency of the learning objective]\label{prop:consistency}
+Let $\mathbf{n}_a$ be the quota of the offspring $T_a\chi$ (a transfer rewrites the quota deterministically and a key move
+leaves it unchanged, so $\mathbf{n}_a$ is known without decoding). If $\hat G_S(a) = G_S(T_a\chi)$ for all $a \in \mathcal{A}$,
+the ranking of candidates by $L^Q(\mathbf{n}_a) + \hat G_S(a)$ coincides with the ranking by the true $C_{\max}(T_a\chi)$, and
+the pairwise ranking loss with labels $G_S(T_a\chi)/L^F$ is zero within a parent exactly when the prediction preserves the order
+of $G_S$.
+\end{proposition}
+\begin{proof}
+By Proposition~\ref{prop:decomp} applied to $T_a\chi$, $C_{\max}(T_a\chi) = L^F + G_Q(T_a\chi) + G_S(T_a\chi) =
+L^Q(\mathbf{n}_a) + G_S(T_a\chi)$. With exact prediction the two keys agree term by term. Within a parent $L^F$ is a positive
+constant, so dividing by it preserves the order, and a pairwise loss penalizes only inverted pairs.
+\end{proof}
+
+\paragraph{Complexity} The fluid LP has $\sum_r K_r \lvert M_{rk}\rvert + 1$ variables and is solved once. A decoding costs
+$O(\sum_r N_r K_r \log m)$ with a heap per machine; one generation costs $\lambda (K_L + K_H + K_R)$ decodings plus one
+batched forward pass of the ranker over $\lambda B$ candidates, whose graph size is given by Proposition~\ref{prop:dims}.
+The job-indexed host spends the same decodings on a genotype of size $2\sum_r N_r K_r$.
+
+\subsection{Predictions tested in the experiments}\label{sec:predictions}
+Performance statements are not theorems; they are stated as conjectures and attached to falsification conditions.
+
+\begin{conjecture}[Sign of the rounding gap]\label{conj:rounding}
+Under the instance distribution of Section~\ref{sec:settings}, the empirical relative rounding gap $G_Q(\mathbf{n}^0)/L^F$
+decreases with $\bar N$ and increases with $V_p$.
+\end{conjecture}
+The bound of Proposition~\ref{prop:rounding} is $\bar B/L^F$; $L^F$ grows roughly linearly in $\bar N$ while $\bar B$ is
+fixed, and larger $V_p$ separates the large terms of $B_i$ from the small ones that the fluid flow prefers. A non-monotone
+curve in $\bar N$ or a reversed sign in $V_p$ refutes the conjecture.
+
+\begin{conjecture}[Sign of the gain]\label{conj:gain}
+On the main tier the gap improvement of FRES over the strongest baseline increases with $\bar N$ and $F$ and decreases
+with $V_N$.
+\end{conjecture}
+Larger $\bar N$ raises the symmetry redundancy of the job-indexed representation while the quota representation is
+unchanged (Proposition~\ref{prop:dims}); larger $F$ increases the quota freedom and the information in the fluid flow;
+larger $V_N$ makes rare types round worse relative to their fluid mass. Any reversed sign refutes the conjecture and is
+reported as such in Section~\ref{sec:factor}.

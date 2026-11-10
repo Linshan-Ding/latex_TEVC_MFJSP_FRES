@@ -1,0 +1,81 @@
+% sections/zh/3-problem.tex -- 问题描述、假设、符号、精确模型、流体松弛、差距恒等式；与英文稿逐段对应。
+\section{问题描述与流体-配额几何}\label{sec:problem}
+
+\subsection{问题描述}\label{sec:problem-desc}
+车间含机器集合 $M$ 与工件类型集合 $\mathcal{R}$。类型 $r$ 有 $N_r \ge 1$ 个完全相同的副本，每个副本按固定工艺路线依次加工 $K_r$ 道工序。类型工序 $(r,k)$ 可在候选机器集 $M_{rk} \subseteq M$ 中任一机器上加工，在机器 $i$ 上的加工时长为 $p_{rki}$；同类型的副本共享候选机器集与加工时长，但每个副本须独立满足自身工艺路线的先后约束。决策为每个副本每道工序的机器分配与各机器上的加工顺序。全部数据在决策前已知，调度一次性给出，因此设定为静态确定性。$N_r = 1$ 对所有 $r$ 成立时，问题退化为标准柔性作业车间调度问题。
+
+假设如下。A1：加工时长确定且已知（常规）；A2：机器同一时刻至多加工一道工序（常规）；A3：加工不可抢占（常规）；A4：所有副本在零时刻可用、无动态到达（常规，在局限中声明）；A5：忽略换模、运输与批量拆分（本文简化，在局限中声明）。
+
+\subsection{符号}\label{sec:notation}
+表 \ref{tab:notation} 列出符号，符号在全文只有一种含义，术语与译法汇总于附录表 \ref{tab:glossary}。副本工序记为 $o = (r,c,k)$，$c$ 为副本索引，$p_{oi} = p_{rki}$。类型的最短工艺路线长为 $\ell_r^{\min} = \sum_k \min_{i \in M_{rk}} p_{rki}$，$B$ 为足够大的常数。
+
+\begin{table}[htbp]
+\centering\small
+\caption{符号说明}\label{tab:notation}
+\begin{tabularx}{\linewidth}{@{}>{\hsize=0.72\hsize}L>{\hsize=1.28\hsize}L@{}}
+\toprule
+\textbf{符号} & \textbf{含义} \\
+\midrule
+$\mathcal{R},\,M$ & 工件类型集合、机器集合（$R = \lvert\mathcal{R}\rvert$，$m = \lvert M\rvert$） \\
+$r,\,c,\,i$；$o,\,o'$ & 类型、副本、机器索引；副本工序 $o = (r,c,k)$ \\
+$N_r,\,K_r$ & 类型 $r$ 的副本数；每副本工序数 \\
+$M_{rk},\,p_{rki}$ & $(r,k)$ 的候选机器集与加工时长 \\
+$\ell_r^{\min},\,B$ & 类型 $r$ 的最短工艺路线长；big-M 常数 \\
+$\bar N,\,V_N,\,F,\,V_p$ & 平均多重度、多重度离散度、柔性度、工时异质度 \\
+$x_{oi},\,s_o,\,y_{oo'}$ & 机器分配、开工时刻与先后次序变量 \\
+$C_{\max}$ & 最大完工时间 \\
+$q_{rki},\,L^F,\,\lambda_i$ & 流体变量、流体下界、机器负载对偶变量（只作特征） \\
+$n_{rki},\,\kappa_{rk},\,\chi$ & 整数配额、优先键、个体 $\chi = (\mathbf{n}, \boldsymbol{\kappa})$ \\
+$L^Q(\mathbf{n})$ & 整数配额下界 \\
+$G_Q,\,G_S$；$g_Q,\,g_S$ & 取整损失、排序残差；二者按 $L^F$ 归一化的值 \\
+$B_i,\,\bar B$ & 机器 $i$ 的取整界及其最大值 \\
+$\mathcal{A},\,a,\,T_a$ & 候选池、候选动作、动作变换 \\
+$\hat G_S(a)$ & 动作 $a$ 的预测排序残差 \\
+$K_L,\,K_H,\,K_R$ & 学习器、流体启发式与随机三源各取的候选数 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{精确模型}\label{sec:model}
+job-indexed 模型为
+\begin{align}
+\min\quad & C_{\max} \label{eq:obj}\\
+\text{s.t.}\quad & \textstyle\sum_{i \in M_{rk}} x_{oi} = 1, && \forall\, o \label{eq:assign}\\
+& s_{(r,c,k+1)} \ge s_o + \textstyle\sum_{i} p_{oi} x_{oi}, && \forall\, o:\, k < K_r \label{eq:prec}\\
+& s_{o'} \ge s_o + p_{oi} - B(3{-}x_{oi}{-}x_{o'i}{-}y_{oo'}), && \forall\,i,\,o{\ne}o' \label{eq:disj}\\
+& C_{\max} \ge s_o + \textstyle\sum_{i} p_{oi} x_{oi}, && \forall\, o:\, k = K_r \label{eq:cmax}\\
+& x_{oi},\, y_{oo'} \in \{0,1\},\quad s_o \ge 0. \label{eq:dom}
+\end{align}
+式 \eqref{eq:assign} 把每道副本工序恰分配到一台候选机器，式 \eqref{eq:prec} 保证每个副本的工艺先后，式 \eqref{eq:disj} 是同机工序的 big-M 析取（$y_{oo'} = 1$ 表示 $o$ 在 $o'$ 之前），式 \eqref{eq:cmax} 定义 makespan，式 \eqref{eq:dom} 为变量域。该模型完整到可直接交给 CP-SAT\cite{ortools}，small 档的精确参考解即由此得到。
+
+\subsection{配额型流体松弛}\label{sec:fluid}
+松弛保留各类型的总量而放弃副本的离散性：
+\begin{align}
+L^F = \min\quad & L \label{eq:fluid-obj}\\
+\text{s.t.}\quad & \textstyle\sum_{i \in M_{rk}} q_{rki} = N_r, && \forall\, r, k \label{eq:fluid-cons}\\
+& \textstyle\sum_{r}\sum_{k:\, i \in M_{rk}} p_{rki}\, q_{rki} \le L, && \forall\, i \label{eq:fluid-load}\\
+& L \ge \ell_r^{\min},\quad q_{rki} \ge 0, && \forall\, r, k, i. \label{eq:fluid-dom}
+\end{align}
+式 \eqref{eq:fluid-cons} 把类型工序 $(r,k)$ 的 $N_r$ 个副本按连续质量分流到候选机器，式 \eqref{eq:fluid-load} 使任一机器的流体负载不超过周期，式 \eqref{eq:fluid-dom} 使周期不小于任一类型的最短路线长。$L^F$ 是流体下界（命题 \ref{prop:fluidlb}），$q^*_{rki}/N_r$ 是 $(r,k)$ 的宏观分流比例。机器负载对偶变量 $\lambda_i$ 只作排序器特征：在流体最优解处它们近似均匀，几乎不含引导信息。
+
+\subsection{整数配额与差距恒等式}\label{sec:gap}
+整数配额 $\mathbf{n}$ 把 $(r,k)$ 的 $n_{rki}$ 个副本分配到机器 $i$，其中 $n_{rki}$ 为非负整数、$i \notin M_{rk}$ 时 $n_{rki} = 0$、$\sum_i n_{rki} = N_r$。它诱导配额下界
+\begin{align}
+L^Q(\mathbf{n}) &= \max\{ \max_i \textstyle\sum_{r,k:\, i \in M_{rk}} p_{rki} n_{rki},\, \max_r \ell_r^{\min} \}, \label{eq:LQ}\\
+C_{\max}(\chi) - L^F &= \underbrace{L^Q(\mathbf{n}) - L^F}_{G_Q} + \underbrace{C_{\max} - L^Q(\mathbf{n})}_{G_S}. \label{eq:decomp}
+\end{align}
+恒等式 \eqref{eq:decomp} 是全文的锚点：任一可行个体的流体差距精确分解为只依赖配额的取整损失 $G_Q$ 与排序残差 $G_S$。归一化量 $g_Q = G_Q/L^F$、$g_S = G_S/L^F$ 用于跨算例比较与排序器标签。以下两条性质不依赖任何关于搜索的假设。
+
+\begin{proposition}[流体下界]\label{prop:fluidlb}
+任一满足式 \eqref{eq:assign}--\eqref{eq:dom} 的调度都有 $C_{\max} \ge L^F$。
+\end{proposition}
+\begin{proof}
+令 $q_{rki} = \sum_c x_{(r,c,k),i}$。由式 \eqref{eq:assign} 得 $\sum_i q_{rki} = N_r$，即式 \eqref{eq:fluid-cons}。机器 $i$ 上的工序由式 \eqref{eq:disj} 互不重叠，总时长 $\sum_{r,k} p_{rki} q_{rki}$ 不超过 $C_{\max}$，即取 $L = C_{\max}$ 的式 \eqref{eq:fluid-load}。每个副本由式 \eqref{eq:prec} 串行完成 $K_r$ 道工序，故 $C_{\max} \ge \ell_r^{\min}$，式 \eqref{eq:fluid-dom} 成立。于是 $(q, C_{\max})$ 是式 \eqref{eq:fluid-obj}--\eqref{eq:fluid-dom} 的可行解，$L^F \le C_{\max}$。
+\end{proof}
+
+\begin{proposition}[非负分解]\label{prop:decomp}
+对任一由配额个体 $\chi = (\mathbf{n}, \boldsymbol{\kappa})$ 解码得到的可行调度，式 \eqref{eq:decomp} 成立且 $G_Q(\chi) \ge 0$、$G_S(\chi) \ge 0$。
+\end{proposition}
+\begin{proof}
+恒等式按定义成立。取 $q = \mathbf{n}$、$L = L^Q(\mathbf{n})$：式 \eqref{eq:fluid-cons} 由配额总量成立，式 \eqref{eq:fluid-load} 由式 \eqref{eq:LQ} 的第一项成立，式 \eqref{eq:fluid-dom} 由第二项成立，故 $L^Q(\mathbf{n}) \ge L^F$，$G_Q \ge 0$。解码后机器 $i$ 上的工序互不重叠，对所有 $i$ 有 $\sum_{r,k} p_{rki} n_{rki} \le C_{\max}$；每个副本串行完成全部工序，$C_{\max} \ge \ell_r^{\min}$；合起来 $C_{\max} \ge L^Q(\mathbf{n})$，$G_S \ge 0$。
+\end{proof}

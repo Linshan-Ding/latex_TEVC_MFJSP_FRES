@@ -1,0 +1,153 @@
+% sections/en/5-experiments.tex -- structured skeleton per spec 6C (5.1-5.7 + instance-factor effects); numbers are placeholders.
+\section{Computational experiments}\label{sec:experiments}
+
+\draftnote{Every number in this section is a placeholder to be filled by \texttt{paper\_assets/scripts/make\_tables.py} from
+\texttt{result/*.csv} under the 6B logging contract; every figure is a placeholder box to be replaced by opt-paper-scifig. All
+directional statements are expectations until the claims are judged.}
+
+\subsection{Experimental settings}\label{sec:settings}
+The evaluation set is a fixed design set generated from an instance parameter table with the mean multiplicity $\bar N$ as scale
+factor and three structural factors, multiplicity dispersion $V_N$, flexibility $F$ and processing-time heterogeneity $V_p$,
+with $R = 8$ job types and $m = 10$ machines (Table~\ref{tab:instances}). The main tier is a $3\times3\times3$ full
+factorial at $\bar N = 10$; the small tier carries exact references from CP-SAT \cite{ortools} at 1800 s; the large tier
+extrapolates the multiplicity beyond the training range; the Brandimarte instances \cite{brandimarte1993routing} are the
+$N_r = 1$ special case. Instances are stored as files and released with the paper; reproduction relies on them and on
+\NumRuns{} independent runs, not on random seeds. Table~\ref{tab:hyper} lists the hyperparameters and
+Table~\ref{tab:baselines} the baselines, one strong representative per family, each at the recommended configuration and the
+same wall-clock budget. Metrics are the makespan, the optimality gap against the exact or reference solution, the fluid gap
+$(C_{\max} - L^F)/L^F$ for cross-tier comparison, the feasibility rate, the area under the quality--time curve at 1, 10 and 60 s
+checkpoints, and the number of exact decodings and the time to target. Significance is assessed by paired Wilcoxon tests on
+per-instance run means ($p < 0.05$) and, with four or more methods, by the Friedman--Nemenyi critical-difference diagram.
+
+\begin{table*}
+\centering\small
+\caption{Evaluation instance set.}\label{tab:instances}
+\input{tables/tab-paper-instances}
+\end{table*}
+
+\begin{table}
+\centering\small
+\caption{Hyperparameters (draft values; final values from the confirmed training-parameter table).}\label{tab:hyper}
+\input{tables/tab-paper-hyper}
+\end{table}
+
+\begin{table*}
+\centering\small
+\caption{Baselines and their configuration.}\label{tab:baselines}
+\input{tables/tab-paper-baselines}
+\end{table*}
+
+\subsection{Comparison with baselines}\label{sec:comparison}
+This subsection asks whether FRES is better than the metaheuristic and learning-based baselines, and whether the difference is
+significant. Table~\ref{tab:main} reports the small and main tiers at the 10 s and 60 s checkpoints; Fig.~\ref{fig:main}
+shows the gap distributions and the critical-difference diagram. \pending{FRES-lite alone reaches a gap no higher than HGA
+and FMAE-s, and the full method improves on the strongest baseline by \ImpvOverBest{} on the main tier.}
+
+\begin{table*}
+\centering\small
+\caption{Main results: mean $\pm$ std over \NumRuns{} runs; best in bold; $\dagger$ marks significance over the runner-up (Wilcoxon, $p < 0.05$). S = small tier (gap to the exact solution), M = main tier (gap to the reference).}\label{tab:main}
+\input{tables/tab-paper-main}
+\end{table*}
+
+\begin{figure}
+\figplace{gap box plots per method on the main tier at 60 s, one panel per tier, with Wilcoxon significance brackets; inset critical-difference diagram}{\texttt{result/*/eval\_results.csv} (gap, method, tier); $p$ values and ranks from \texttt{result/stats\_summary.csv}}{opt-paper-scifig route A (matplotlib), column width 88\,mm}{52mm}
+\caption{Gap distributions and critical-difference diagram on the main tier.}\label{fig:main}
+\end{figure}
+
+\subsection{Ablation and ranking study}\label{sec:ablation}
+This subsection asks whether the gain comes from the three mechanisms and whether the ranker reduces wasted decodings.
+Variants A1--A5 remove, one at a time, the fluid quota, the quota compression, the ranker, the residual scoping and the
+safeguard (Table~\ref{tab:ablation}). Fig.~\ref{fig:ablation} shows the convergence of the variants, Fig.~\ref{fig:recall}
+the top-10 recall of the ranker against the fluid heuristic and the generic ranker at equal candidate budget, and
+Fig.~\ref{fig:safeguard} the share of accepted offspring that came from each source of the union. \pending{The full method
+decodes \OursDecodeReduction{} fewer candidates than FRES-lite at no loss of quality.}
+
+\begin{table}
+\centering\small
+\caption{Ablation and mechanism metrics on the main tier.}\label{tab:ablation}
+\input{tables/tab-paper-ablation}
+\end{table}
+
+\begin{figure}
+\figplace{best-so-far gap versus wall clock for FRES and A1--A5, mean line with $\pm$ std band, log time axis}{\texttt{result/*/curve.csv} aggregated over runs}{opt-paper-scifig route A, column width 88\,mm}{50mm}
+\caption{Convergence of the ablation variants.}\label{fig:ablation}
+\end{figure}
+
+\begin{figure}
+\figplace{top-10 recall of the true improving action versus the number of decoded candidates, three curves (residual ranker, fluid heuristic, generic ranker), same candidate pool}{\texttt{result/*/log.csv} ranking metrics and \texttt{operator\_trace.csv}}{opt-paper-scifig route A, column width 88\,mm}{50mm}
+\caption{Ranking quality at equal candidate budget.}\label{fig:recall}
+\end{figure}
+
+\begin{figure}
+\figplace{stacked bars of the source (learned / fluid heuristic / random) of the accepted offspring over generations, one panel per $V_N$ level}{\texttt{operator\_trace.csv} (best\_from, generation) joined with \texttt{index.csv}}{opt-paper-scifig route A, column width 88\,mm}{48mm}
+\caption{Source of the accepted offspring under the safeguarded union.}\label{fig:safeguard}
+\end{figure}
+
+\subsection{Parameter sensitivity}\label{sec:sensitivity}
+This subsection asks whether the preselection parameters need tuning. Fig.~\ref{fig:sens} scans the pool size $B$ and the
+learner share $K_L$ on the validation tier. \pending{Performance is flat over the scanned grid.}
+
+\begin{figure}
+\figplace{heat map of the main-tier gap over $B \in \{48, 96, 192\}$ and $K_L \in \{8, 16, 24\}$, cell annotated with the mean, chosen setting outlined}{\texttt{result/sensitivity.csv}}{opt-paper-scifig route A, column width 88\,mm}{48mm}
+\caption{Sensitivity to the candidate-pool size and the learner share.}\label{fig:sens}
+\end{figure}
+
+\subsection{Instance-factor effects}\label{sec:factor}
+This subsection asks on which problem characteristics the method is stronger or weaker, and whether the theoretical bound is
+supported. It is distinct from the parameter sensitivity above: here the factors belong to the problem, not to the algorithm.
+Fig.~\ref{fig:rounding} compares the empirical rounding gap $G_Q/L^F$ with the bound $\bar B/L^F$ of
+Proposition~\ref{prop:rounding} across $\bar N$ and $V_p$ (Conjecture~\ref{conj:rounding}); Table~\ref{tab:factor} and
+Fig.~\ref{fig:factor} give the main effects and two-factor interactions of the gain over the strongest baseline
+(Conjecture~\ref{conj:gain}). Error bars are between-run standard deviations, not within-cell replicates.
+
+\begin{table*}
+\centering\small
+\caption{Instance-factor main effects on the main tier (27 instances with distinct parameters, 9 per level; error is the between-run std over \NumRuns{} runs).}\label{tab:factor}
+\input{tables/tab-paper-factor}
+\end{table*}
+
+\begin{figure}
+\figplace{two panels: empirical $G_Q/L^F$ and the bound $\bar B/L^F$ versus $\bar N$ (log axis, small / main / large tiers) and versus $V_p$ (main tier), markers with between-run error bars}{\texttt{relaxation\_diag.csv} (rounding\_gap, rounding\_bound, fluid\_lb) joined with \texttt{index.csv}}{opt-paper-scifig route A, column width 88\,mm}{48mm}
+\caption{Empirical rounding gap against its theoretical bound.}\label{fig:rounding}
+\end{figure}
+
+\begin{figure*}
+\figplace{left: main-effect plot of the gain over the strongest baseline for $V_N$, $F$, $V_p$ with error bars; right: two-factor interaction heat maps}{\texttt{eval\_results.csv} joined with \texttt{index.csv} on instance\_id}{opt-paper-scifig route A, two-column width 178\,mm}{52mm}
+\caption{Factor effects of the gain over the strongest baseline.}\label{fig:factor}
+\end{figure*}
+
+\subsection{Training and search behaviour}\label{sec:training}
+This subsection asks whether the search and the ranker training are stable. Fig.~\ref{fig:anytime} shows the best-so-far gap
+on the fixed validation set against wall clock for all methods and the ranker's training curve.
+
+\begin{figure}
+\figplace{left: anytime curve of the validation-set gap versus wall clock for all methods, mean $\pm$ std; right: ranking loss and top-10 recall per epoch for the ranker over \NumRuns{} training runs}{\texttt{curve.csv} and \texttt{log.csv}}{opt-paper-scifig route A, column width 88\,mm}{50mm}
+\caption{Anytime behaviour and ranker training curves.}\label{fig:anytime}
+\end{figure}
+
+\subsection{Generalization to higher multiplicity}\label{sec:generalization}
+This subsection asks whether the method works only within the training multiplicity range. Table~\ref{tab:generalization}
+solves the large tier ($\bar N \in \{25, 50\}$) directly with the frozen ranker; Fig.~\ref{fig:gen} plots the gap against
+$\bar N$ with the training range shaded. \pending{The gap of FRES is flat in $\bar N$ while that of the job-indexed hosts
+grows.}
+
+\begin{table}
+\centering\small
+\caption{Multiplicity extrapolation beyond the training range ($\bar N \le 12$).}\label{tab:generalization}
+\input{tables/tab-paper-generalization}
+\end{table}
+
+\begin{figure}
+\figplace{gap versus $\bar N$ for FRES, HGA, FMAE-s and A2, training range shaded, log $x$ axis}{\texttt{eval\_results.csv} (tier, gap) joined with \texttt{index.csv} (scale)}{opt-paper-scifig route A, column width 88\,mm}{48mm}
+\caption{Gap against the mean multiplicity.}\label{fig:gen}
+\end{figure}
+
+\subsection{Case study}\label{sec:case}
+This subsection asks whether the schedules are reasonable and whether the quotas stay close to the fluid flow.
+Fig.~\ref{fig:case} shows a Gantt chart of one main-tier instance next to the integer quota and the fluid ratio per
+type-operation.
+
+\begin{figure*}
+\figplace{left: Gantt chart of the FRES schedule on one main-tier instance, copies of a type in one hue, critical path outlined; right: per type-operation bars of $n_{rki}/N_r$ against $q^*_{rki}/N_r$}{schedule export of one instance; \texttt{relaxation\_diag.csv}}{opt-paper-scifig route A, two-column width 178\,mm}{60mm}
+\caption{Schedule and quota--fluid comparison on one instance.}\label{fig:case}
+\end{figure*}

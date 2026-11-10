@@ -1,0 +1,47 @@
+% sections/en/2-related-work.tex -- organized by gap, not as a list; closing sentence names what is missing.
+\section{Related work}\label{sec:related}
+
+\subsection{Fluid-assisted evolutionary search for the MFJSP}\label{sec:related-fluid}
+\pending{The fluid master--slave evolutionary algorithm and its variants relax the MFJSP to a continuous fluid model and use
+the resulting flow ratios for initialization, dispatching rules or macro-level guidance of a master population
+\citeneed{fluid master--slave EA for the MFJSP, 2022, and its setup-time variant}.} These works establish that fluid
+ratios carry a meaningful flow structure, but the fluid solution stays a prior: the search and any learning component still
+face the full discrete problem, and the representation remains job-indexed.
+
+\subsection{Fluid models combined with reinforcement learning}\label{sec:related-rl}
+\pending{Multi-policy PPO with fluid quantities as state features \citeneed{MPPPO, 2024}, PPO that tunes the parameters of a
+fluid EA on line \citeneed{DSLFMAE, 2025}, and fluid relaxation feeding a double DQN for dynamic multiplicity scheduling
+\citeneed{fluid + DDQN, 2025} use fluid quantities as features or control signals.} None of them decomposes the source of the
+gap. \pending{A concurrent line studies the exact fluid reachability of the limit of infinitely many copies
+\citeneed{recursive fluid reachability, 2026}}, which is complementary to the finite and unbalanced multiplicity range
+studied here.
+
+\subsection{Learning to improve and learning to filter candidates}\label{sec:related-improve}
+Improvement-type deep reinforcement learning for the JSP and FJSP lets a policy network take the complete improvement
+decision and relies on credit assignment \citeneed{L2S-type critical-block improvement policies, 2024; memory-augmented
+improvement heuristics for the FJSP, 2025}. Supervised candidate filtering, as in NeuroLKH's candidate edge sets and learned
+move screening for tabu search \citeneed{NeuroLKH; learned tabu move filtering}, is the methodological ancestor of the ranker
+used here, but it has not been combined with a relaxation-based decomposition. Classical FJSP metaheuristics supply the
+host components: the two-layer genetic encoding \cite{pezzella2008genetic}, critical-block tabu search
+\cite{mastrolilli2000effective} and the Brandimarte \cite{brandimarte1993routing} and Hurink \cite{hurink1994tabu}
+benchmarks.
+
+\begin{table}
+\centering\small
+\caption{Closest related work and the difference of the present method.}\label{tab:related}
+\begin{tabularx}{\linewidth}{@{}>{\hsize=0.75\hsize}L>{\hsize=0.85\hsize}L>{\hsize=1.4\hsize}L@{}}
+\toprule
+\textbf{Work} & \textbf{Paradigm} & \textbf{Difference} \\
+\midrule
+Fluid master--slave EA & fluid-assisted EA & fluid ratios only initialize and guide; representation job-indexed \\
+DSLFMAE & fluid EA + PPO control & the learner tunes EA parameters, not candidate quality \\
+MPPPO & fluid features + DRL construction & end-to-end construction without search \\
+L2S-type improvement DRL & improvement DRL & the policy takes the whole improvement decision \\
+\textbf{This paper} & \textbf{EA on quota chromosome + residual ranker} & \textbf{gap decomposed exactly; learner scoped to the residual; exact decoding arbitrates} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Table~\ref{tab:related} summarizes the positioning. None of the listed works separates the fluid gap into two parts of
+different origin, and none scopes the learner to the part that the analytic model cannot explain; this is the gap the
+present paper addresses.
