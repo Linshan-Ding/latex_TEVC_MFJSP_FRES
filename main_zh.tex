@@ -1,0 +1,67 @@
+% main_zh.tex -- 中文稿件（与 main.tex 同步的双根之一；ctexart，A4 单栏 11pt，行距 1.5）。编译：latexmk -xelatex main_zh.tex
+% 正文在 sections/zh/，与 sections/en/ 文件一一对应；表格、宏、图、附录术语表与英文稿共用同一份文件。
+\documentclass[11pt,a4paper,fontset=fandol]{ctexart}
+\newif\iflangzh\langzhtrue
+\newcommand{\bi}[2]{#1}            % 共享文件写 \bi{中文}{English}，本根取中文
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.6cm,right=2.6cm]{geometry}
+\usepackage{fontspec}
+\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{TeX Gyre Termes}}
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage{booktabs,multirow,array,tabularx,threeparttable}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\setlist{itemsep=2pt,topsep=4pt,parsep=0pt}
+\usepackage{setspace}
+\setstretch{1.5}
+\usepackage{float}
+\usepackage{caption}
+\captionsetup[table]{name=表,font=small,labelfont=bf,skip=6pt,position=top}
+\captionsetup[figure]{name=图,font=small,labelfont=bf,skip=6pt,position=bottom}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\floatname{algorithm}{算法}
+\renewcommand{\algorithmicrequire}{\textbf{输入：}}
+\renewcommand{\algorithmicensure}{\textbf{输出：}}
+\usepackage[colorlinks=true,linkcolor=deepblue,citecolor=deepblue,urlcolor=deepblue]{hyperref}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\theoremstyle{plain}
+\newtheorem{theorem}{定理}
+\newtheorem{proposition}{命题}
+\newtheorem{conjecture}{猜想}
+\renewcommand{\proofname}{证明}
+\newif\ifanonymous
+\input{macros/placeholders}
+\input{macros/results}
+\input{frontmatter-authors}
+\begin{document}
+\begin{center}
+{\LARGE\bfseries 面向多重度柔性作业车间调度的流体-残差进化搜索\par}
+\vspace{6pt}
+{\large Fluid-residual evolutionary search for multiplicity flexible job-shop scheduling\par}
+\vspace{10pt}
+{\large 〔作者块由 submission.yaml 生成；匿名稿留空〕\par}
+\end{center}
+\draftnote{本文为实验前的中文稿件蓝图，与英文稿 \texttt{main.tex} 逐节同步（\texttt{paper\_assets/scripts/check\_zh\_sync.py} 机检）。
+第 \ref{sec:problem}、\ref{sec:method} 节为正文；摘要、引言、相关工作、实验与结论为结构化草稿，论断标
+\textsuperscript{[待裁决]}。摘要与贡献列表须在 \texttt{docs/claim-verdicts.md} 完成裁决后按实际结果重写，不得直接投稿。}
+\section*{摘要}
+\noindent
+多重度柔性作业车间调度问题描述少数几类工件各有多个相同副本的车间：搜索空间随副本数增长，而同类副本可以互换。现有流体辅助的进化与强化学习方法把流体松弛当作初始化、状态特征或控制信号使用，没有说明离散调度的困难里哪一部分已被流体模型解释。本文把流体下界到可行 makespan 的差距精确分解为连续配额取整为整数配额时的取整损失与固定整数配额下的排序残差。维度不随副本数增长的配额染色体与守恒的配额迁移承载前者；只预测排序残差、输出不违反解析下界的商图排序器承载后者，并由学习器、流体启发式与随机三源并集的保底预选把每一次决策都交给精确解码裁决。\pending{在三个结构因子平衡交叉的 59 个固定设计算例、Brandimarte 公开基准与多重度外推档上，本方法在同墙钟预算下的 makespan gap 不高于 job-indexed 遗传算法、流体进化算法与两类学习型基线，真实解码次数减少 \OursDecodeReduction{}。}\pending{实证的取整差距随平均多重度减小，与理论预测一致。}
+
+\vspace{6pt}
+\noindent\textbf{关键词：}多重度柔性作业车间调度；流体松弛；整数配额；候选排序；进化搜索
+\clearpage
+\tableofcontents
+\clearpage
+\input{sections/zh/1-introduction}
+\input{sections/zh/2-related-work}
+\input{sections/zh/3-problem}
+\input{sections/zh/4-method}
+\input{sections/zh/5-experiments}
+\input{sections/zh/6-conclusion}
+\appendix
+\section{术语与符号对照}
+\input{appendix/glossary}
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+\end{document}

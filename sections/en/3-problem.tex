@@ -1,0 +1,112 @@
+% sections/en/3-problem.tex -- problem statement, assumptions, notation, exact model, fluid relaxation, gap identity.
+\section{Problem statement and fluid--quota geometry}\label{sec:problem}
+
+\subsection{Problem description}\label{sec:problem-desc}
+A shop has a machine set $M$ and a set $\mathcal{R}$ of job types. Type $r$ consists of $N_r \ge 1$ identical copies,
+each processed along a fixed routing of $K_r$ operations. The type-operation $(r,k)$ can be processed on any machine of
+its candidate set $M_{rk} \subseteq M$ with processing time $p_{rki}$; all copies of a type share candidate sets and
+processing times, but each copy must satisfy the precedence constraints of its own routing. The decisions are the machine
+assignment of every copy-operation and the processing order on every machine. All data are known in advance and the
+schedule is produced once, so the setting is static and deterministic. When $N_r = 1$ for every $r$ the problem reduces to
+the standard flexible job-shop scheduling problem (FJSP).
+
+The following assumptions are made. A1: processing times are deterministic and known (standard). A2: a machine processes
+at most one operation at a time (standard). A3: processing is non-preemptive (standard). A4: all copies are available at
+time zero and there are no dynamic arrivals (standard; stated under limitations). A5: setup times, transportation and lot
+splitting are ignored (simplification of this paper; stated under limitations).
+
+\subsection{Notation}\label{sec:notation}
+Table~\ref{tab:notation} lists the symbols; a symbol keeps one meaning throughout the paper, and the appendix (Table~\ref{tab:glossary}) collects the terminology. A copy-operation is
+$o = (r, c, k)$ with copy index $c$, and $p_{oi} = p_{rki}$. The shortest route length of a type is
+$\ell_r^{\min} = \sum_k \min_{i \in M_{rk}} p_{rki}$ and $B$ is a sufficiently large constant.
+
+\begin{table}
+\centering\small
+\caption{Notation.}\label{tab:notation}
+\begin{tabularx}{\linewidth}{@{}>{\hsize=0.72\hsize}L>{\hsize=1.28\hsize}L@{}}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} \\
+\midrule
+$\mathcal{R},\,M$ & job-type set, machine set ($R = \lvert\mathcal{R}\rvert$, $m = \lvert M\rvert$) \\
+$r,\,c,\,i$; $o,\,o'$ & type, copy and machine indices; copy-operations $o = (r,c,k)$ \\
+$N_r,\,K_r$ & copies of type $r$; operations per copy \\
+$M_{rk},\,p_{rki}$ & candidate machines and processing time of $(r,k)$ \\
+$\ell_r^{\min},\,B$ & shortest route length of type $r$; big-M constant \\
+$\bar N,\,V_N,\,F,\,V_p$ & mean multiplicity, multiplicity dispersion, flexibility, processing-time heterogeneity \\
+$x_{oi},\,s_o,\,y_{oo'}$ & assignment, start time and sequencing variables \\
+$C_{\max}$ & makespan \\
+$q_{rki},\,L^F,\,\lambda_i$ & fluid variable, fluid lower bound, machine-load dual (feature only) \\
+$n_{rki},\,\kappa_{rk},\,\chi$ & integer quota, priority key, individual $\chi = (\mathbf{n}, \boldsymbol{\kappa})$ \\
+$L^Q(\mathbf{n})$ & integer-quota bound \\
+$G_Q,\,G_S$; $g_Q,\,g_S$ & rounding loss, sequencing residual; their $L^F$-normalized values \\
+$B_i,\,\bar B$ & rounding bound of machine $i$ and its maximum \\
+$\mathcal{A},\,a,\,T_a$ & candidate pool, action, action transform \\
+$\hat G_S(a)$ & predicted sequencing residual of action $a$ \\
+$K_L,\,K_H,\,K_R$ & candidates taken from the learner, the fluid heuristic and at random \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Exact model}\label{sec:model}
+The job-indexed model is
+\begin{align}
+\min\quad & C_{\max} \label{eq:obj}\\
+\text{s.t.}\quad & \textstyle\sum_{i \in M_{rk}} x_{oi} = 1, && \forall\, o \label{eq:assign}\\
+& s_{(r,c,k+1)} \ge s_o + \textstyle\sum_{i} p_{oi} x_{oi}, && \forall\, o:\, k < K_r \label{eq:prec}\\
+& s_{o'} \ge s_o + p_{oi} - B(3{-}x_{oi}{-}x_{o'i}{-}y_{oo'}), && \forall\,i,\,o{\ne}o' \label{eq:disj}\\
+& C_{\max} \ge s_o + \textstyle\sum_{i} p_{oi} x_{oi}, && \forall\, o:\, k = K_r \label{eq:cmax}\\
+& x_{oi},\, y_{oo'} \in \{0,1\},\quad s_o \ge 0. \label{eq:dom}
+\end{align}
+Constraint~\eqref{eq:assign} assigns every copy-operation to exactly one candidate machine, \eqref{eq:prec} enforces the
+routing of each copy, \eqref{eq:disj} is the big-M disjunction on a shared machine ($y_{oo'} = 1$ when $o$ precedes $o'$),
+\eqref{eq:cmax} defines the makespan and \eqref{eq:dom} the domains. The model is complete enough to be handed to CP-SAT
+\cite{ortools}, which is how the exact reference solutions of the small tier are produced.
+
+\subsection{Quota-type fluid relaxation}\label{sec:fluid}
+The relaxation keeps the per-type totals and drops the discreteness of the copies:
+\begin{align}
+L^F = \min\quad & L \label{eq:fluid-obj}\\
+\text{s.t.}\quad & \textstyle\sum_{i \in M_{rk}} q_{rki} = N_r, && \forall\, r, k \label{eq:fluid-cons}\\
+& \textstyle\sum_{r}\sum_{k:\, i \in M_{rk}} p_{rki}\, q_{rki} \le L, && \forall\, i \label{eq:fluid-load}\\
+& L \ge \ell_r^{\min},\quad q_{rki} \ge 0, && \forall\, r, k, i. \label{eq:fluid-dom}
+\end{align}
+Constraint~\eqref{eq:fluid-cons} routes the $N_r$ copies of type-operation $(r,k)$ to its candidate machines as a
+continuous mass, \eqref{eq:fluid-load} bounds the fluid load of every machine by the cycle length and
+\eqref{eq:fluid-dom} keeps the cycle length above every shortest route. $L^F$ is the fluid lower bound
+(Proposition~\ref{prop:fluidlb}) and $q^*_{rki}/N_r$ is the macroscopic flow ratio of $(r,k)$. The machine-load duals
+$\lambda_i$ are used only as ranker features: at the fluid optimum they are close to uniform and carry little guidance.
+
+\subsection{Integer quotas and the gap identity}\label{sec:gap}
+An integer quota $\mathbf{n}$ assigns $n_{rki}$ copies of $(r,k)$ to machine $i$, with $n_{rki}$ a non-negative integer,
+$n_{rki} = 0$ for $i \notin M_{rk}$ and $\sum_i n_{rki} = N_r$. It induces the quota bound
+\begin{align}
+L^Q(\mathbf{n}) &= \max\{ \max_i \textstyle\sum_{r,k:\, i \in M_{rk}} p_{rki} n_{rki},\, \max_r \ell_r^{\min} \}, \label{eq:LQ}\\
+C_{\max}(\chi) - L^F &= \underbrace{L^Q(\mathbf{n}) - L^F}_{G_Q} + \underbrace{C_{\max} - L^Q(\mathbf{n})}_{G_S}. \label{eq:decomp}
+\end{align}
+Identity~\eqref{eq:decomp} is the anchor of the paper: for any feasible individual the fluid gap splits exactly into the
+rounding loss $G_Q$, which depends only on the quota, and the sequencing residual $G_S$. The normalized quantities
+$g_Q = G_Q/L^F$ and $g_S = G_S/L^F$ serve for cross-instance comparison and as ranker labels. Two properties hold without
+any assumption on the search.
+
+\begin{proposition}[Fluid lower bound]\label{prop:fluidlb}
+Every schedule satisfying \eqref{eq:assign}--\eqref{eq:dom} has $C_{\max} \ge L^F$.
+\end{proposition}
+\begin{proof}
+Let $q_{rki} = \sum_c x_{(r,c,k),i}$. By \eqref{eq:assign}, $\sum_i q_{rki} = N_r$, which is \eqref{eq:fluid-cons}. The
+operations assigned to machine $i$ do not overlap by \eqref{eq:disj}, so their total length $\sum_{r,k} p_{rki} q_{rki}$ is at
+most $C_{\max}$, which is \eqref{eq:fluid-load} with $L = C_{\max}$. Each copy completes its $K_r$ operations in series by
+\eqref{eq:prec}, so $C_{\max} \ge \ell_r^{\min}$ and \eqref{eq:fluid-dom} holds. Hence $(q, C_{\max})$ is feasible for
+\eqref{eq:fluid-obj}--\eqref{eq:fluid-dom} and $L^F \le C_{\max}$.
+\end{proof}
+
+\begin{proposition}[Non-negative decomposition]\label{prop:decomp}
+For every feasible schedule decoded from a quota individual $\chi = (\mathbf{n}, \boldsymbol{\kappa})$, identity
+\eqref{eq:decomp} holds with $G_Q(\chi) \ge 0$ and $G_S(\chi) \ge 0$.
+\end{proposition}
+\begin{proof}
+The identity is immediate. With $q = \mathbf{n}$ and $L = L^Q(\mathbf{n})$, constraint \eqref{eq:fluid-cons} holds by
+the quota totals, \eqref{eq:fluid-load} by the first term of \eqref{eq:LQ} and \eqref{eq:fluid-dom} by the second, so
+$L^Q(\mathbf{n}) \ge L^F$ and $G_Q \ge 0$. After decoding, the operations on machine $i$ do not overlap, so
+$\sum_{r,k} p_{rki} n_{rki} \le C_{\max}$ for every $i$, and every copy runs its route in series, so
+$C_{\max} \ge \ell_r^{\min}$; together $C_{\max} \ge L^Q(\mathbf{n})$ and $G_S \ge 0$.
+\end{proof}

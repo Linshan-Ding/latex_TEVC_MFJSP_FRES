@@ -1,0 +1,120 @@
+% sections/zh/5-experiments.tex -- 按规格 6C 的结构化骨架（5.1–5.7 + 算例因子效应）；数值全部为占位符。
+\section{实验}\label{sec:experiments}
+
+\draftnote{本节全部数值为占位符，将由 \texttt{paper\_assets/scripts/make\_tables.py} 从 \texttt{result/*.csv} 按《实验设计规格》6B 契约填充；全部图形为占位框，由 opt-paper-scifig 生成后替换。方向性表述在裁决完成前均为预期。}
+
+\subsection{实验设置}\label{sec:settings}
+评测集是由算例参数表生成的固定设计集：平均多重度 $\bar N$ 为规模因子，多重度离散度 $V_N$、柔性度 $F$ 与工时异质度 $V_p$ 为三个结构因子，类型数 $R = 8$、机器数 $m = 10$（表 \ref{tab:instances}）。主实验档为 $\bar N = 10$ 下的 $3\times3\times3$ 全因子；small 档由 CP-SAT\cite{ortools} 在 1800 s 内给出精确参考解；large 档把多重度外推到训练区间之外；Brandimarte 算例\cite{brandimarte1993routing} 为 $N_r = 1$ 的特例。算例以文件形式固定并随论文发布，复现依靠这些文件与 \NumRuns{} 次独立运行而非随机种子。表 \ref{tab:hyper} 列出超参数，表 \ref{tab:baselines} 列出基线：每族一个强代表，取推荐配置与同等墙钟预算。指标为 makespan、相对精确解或参考解的最优性 gap、用于跨档比较的流体 gap $(C_{\max} - L^F)/L^F$、可行率、1 / 10 / 60 s 检查点下的质量-时间曲线面积，以及精确解码次数与达到目标的时间。显著性用逐算例 run 均值的配对 Wilcoxon 检验（$p < 0.05$）评估，方法数不少于四时另给 Friedman–Nemenyi 临界差图。
+
+\begin{table}[htbp]
+\centering\small
+\caption{评测算例设置}\label{tab:instances}
+\input{tables/tab-paper-instances}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{超参数设置（草案值；终值以确认后的训练参数表为准）}\label{tab:hyper}
+\input{tables/tab-paper-hyper}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\caption{对比方法及配置}\label{tab:baselines}
+\input{tables/tab-paper-baselines}
+\end{table}
+
+\subsection{与基线方法的对比}\label{sec:comparison}
+本小节回答 FRES 是否优于元启发式与学习型基线、差异是否显著。表 \ref{tab:main} 报告 small 与 main 档在 10 s 与 60 s 检查点的结果；图 \ref{fig:main} 给出 gap 分布与临界差图。\pending{仅 FRES-lite 就达到不高于 HGA 与 FMAE-s 的 gap，完整方法在主实验档相对最强基线改善 \ImpvOverBest{}。}
+
+\begin{table}[htbp]
+\centering\small
+\caption{主要结果：\NumRuns{} 次运行的均值 $\pm$ 标准差；最优加粗；$\dagger$ 表示显著优于次优（Wilcoxon，$p < 0.05$）。S = small 档（相对精确解的 gap），M = main 档（相对参考解的 gap）}\label{tab:main}
+\input{tables/tab-paper-main}
+\end{table}
+
+\begin{figure}[htbp]
+\figplace{主实验档 60 s 时各方法的 gap 箱线图，每档一个面板，带 Wilcoxon 显著性标注；内嵌临界差图}{\texttt{result/*/eval\_results.csv}（gap、method、tier）；$p$ 值与秩取自 \texttt{result/stats\_summary.csv}}{opt-paper-scifig 路线 A（matplotlib），栏宽 88\,mm}{52mm}
+\caption{主实验档的 gap 分布与临界差图}\label{fig:main}
+\end{figure}
+
+\subsection{消融与排序研究}\label{sec:ablation}
+本小节回答增益是否来自三个机制、排序器是否减少了无效解码。变体 A1--A5 逐一去掉流体配额、配额压缩、排序器、残差限定与保底（表 \ref{tab:ablation}）。图 \ref{fig:ablation} 给出各变体的收敛过程，图 \ref{fig:recall} 给出同候选预算下排序器相对流体启发式与通用排序器的 top-10 recall，图 \ref{fig:safeguard} 给出被接受子代来自并集各源的占比。\pending{完整方法比 FRES-lite 少解码 \OursDecodeReduction{} 个候选而质量不降。}
+
+\begin{table}[htbp]
+\centering\small
+\caption{主实验档的消融与机制指标}\label{tab:ablation}
+\input{tables/tab-paper-ablation}
+\end{table}
+
+\begin{figure}[htbp]
+\figplace{FRES 与 A1--A5 的在位最优 gap 随墙钟变化，均值线加 $\pm$ 标准差阴影带，时间轴取对数}{\texttt{result/*/curve.csv} 跨 run 聚合}{opt-paper-scifig 路线 A，栏宽 88\,mm}{50mm}
+\caption{消融变体的收敛过程}\label{fig:ablation}
+\end{figure}
+
+\begin{figure}[htbp]
+\figplace{真实改善动作的 top-10 recall 随解码候选数变化，三条曲线（残差排序器、流体启发式、通用排序器），同一候选池}{\texttt{result/*/log.csv} 的 ranking 指标与 \texttt{operator\_trace.csv}}{opt-paper-scifig 路线 A，栏宽 88\,mm}{50mm}
+\caption{同候选预算下的排序质量}\label{fig:recall}
+\end{figure}
+
+\begin{figure}[htbp]
+\figplace{被接受子代的来源（学习器 / 流体启发式 / 随机）随代数变化的堆叠柱，每个 $V_N$ 水平一个面板}{\texttt{operator\_trace.csv}（best\_from、generation）join \texttt{index.csv}}{opt-paper-scifig 路线 A，栏宽 88\,mm}{48mm}
+\caption{保底并集下被接受子代的来源}\label{fig:safeguard}
+\end{figure}
+
+\subsection{参数敏感性}\label{sec:sensitivity}
+本小节回答预选参数是否需要调参。图 \ref{fig:sens} 在验证档上扫描候选池大小 $B$ 与学习器份额 $K_L$。\pending{性能在扫描网格上平坦。}
+
+\begin{figure}[htbp]
+\figplace{主实验档 gap 在 $B \in \{48, 96, 192\}$ 与 $K_L \in \{8, 16, 24\}$ 上的热力图，格内标均值，选定设置加框}{\texttt{result/sensitivity.csv}}{opt-paper-scifig 路线 A，栏宽 88\,mm}{48mm}
+\caption{对候选池大小与学习器份额的敏感性}\label{fig:sens}
+\end{figure}
+
+\subsection{算例因子效应}\label{sec:factor}
+本小节回答方法在什么问题特性下更强或更弱、理论界是否得到支持。它与上一小节的参数敏感性不同：这里的因子属于问题而非算法。图 \ref{fig:rounding} 在 $\bar N$ 与 $V_p$ 上比较实证取整差距 $G_Q/L^F$ 与命题 \ref{prop:rounding} 的界 $\bar B/L^F$（猜想 \ref{conj:rounding}）；表 \ref{tab:factor} 与图 \ref{fig:factor} 给出相对最强基线增益的主效应与双因子交互（猜想 \ref{conj:gain}）。误差棒为运行间标准差，不是单元内重复。
+
+\begin{table}[htbp]
+\centering\small
+\caption{主实验档的算例因子主效应（27 个参数各异的算例，每水平 9 个；误差为 \NumRuns{} 次运行的运行间标准差）}\label{tab:factor}
+\input{tables/tab-paper-factor}
+\end{table}
+
+\begin{figure}[htbp]
+\figplace{两个面板：实证 $G_Q/L^F$ 与界 $\bar B/L^F$ 随 $\bar N$（对数轴，small / main / large 档）与随 $V_p$（主实验档）的变化，标记点带运行间误差棒}{\texttt{relaxation\_diag.csv}（rounding\_gap、rounding\_bound、fluid\_lb）join \texttt{index.csv}}{opt-paper-scifig 路线 A，栏宽 88\,mm}{48mm}
+\caption{实证取整差距与其理论界}\label{fig:rounding}
+\end{figure}
+
+\begin{figure}[htbp]
+\figplace{左：相对最强基线增益在 $V_N$、$F$、$V_p$ 上的主效应图，带误差棒；右：双因子交互热力图}{\texttt{eval\_results.csv} 按 instance\_id join \texttt{index.csv}}{opt-paper-scifig 路线 A，双栏宽 178\,mm}{52mm}
+\caption{相对最强基线增益的因子效应}\label{fig:factor}
+\end{figure}
+
+\subsection{训练与搜索行为}\label{sec:training}
+本小节回答搜索与排序器训练是否稳定。图 \ref{fig:anytime} 给出固定验证集上各方法在位最优 gap 随墙钟的变化与排序器的训练曲线。
+
+\begin{figure}[htbp]
+\figplace{左：各方法验证集 gap 随墙钟的 anytime 曲线，均值 $\pm$ 标准差；右：排序器 \NumRuns{} 次训练的逐 epoch 排序损失与 top-10 recall}{\texttt{curve.csv} 与 \texttt{log.csv}}{opt-paper-scifig 路线 A，栏宽 88\,mm}{50mm}
+\caption{anytime 行为与排序器训练曲线}\label{fig:anytime}
+\end{figure}
+
+\subsection{向更高多重度的泛化}\label{sec:generalization}
+本小节回答方法是否只在训练多重度区间内有效。表 \ref{tab:generalization} 用冻结的排序器直接求解 large 档（$\bar N \in \{25, 50\}$）；图 \ref{fig:gen} 画出 gap 随 $\bar N$ 的变化并以阴影标出训练区间。\pending{FRES 的 gap 在 $\bar N$ 上平坦，而 job-indexed 宿主的 gap 随之增长。}
+
+\begin{table}[htbp]
+\centering\small
+\caption{训练区间（$\bar N \le 12$）之外的多重度外推}\label{tab:generalization}
+\input{tables/tab-paper-generalization}
+\end{table}
+
+\begin{figure}[htbp]
+\figplace{FRES、HGA、FMAE-s 与 A2 的 gap 随 $\bar N$ 变化，训练区间以阴影标出，$x$ 轴取对数}{\texttt{eval\_results.csv}（tier、gap）join \texttt{index.csv}（scale）}{opt-paper-scifig 路线 A，栏宽 88\,mm}{48mm}
+\caption{gap 随平均多重度的变化}\label{fig:gen}
+\end{figure}
+
+\subsection{案例分析}\label{sec:case}
+本小节回答调度是否合理、配额是否贴近流体分流。图 \ref{fig:case} 给出一个主实验档算例的甘特图，并列出每个类型工序的整数配额与流体比例。
+
+\begin{figure}[htbp]
+\figplace{左：FRES 在一个主实验档算例上的甘特图，同类副本同一色系，关键路径加框；右：每个类型工序的 $n_{rki}/N_r$ 与 $q^*_{rki}/N_r$ 对照柱}{单个算例的调度导出；\texttt{relaxation\_diag.csv}}{opt-paper-scifig 路线 A，双栏宽 178\,mm}{60mm}
+\caption{单算例的调度与配额-流体对照}\label{fig:case}
+\end{figure}

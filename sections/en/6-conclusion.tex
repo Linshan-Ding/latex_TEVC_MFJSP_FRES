@@ -1,0 +1,21 @@
+% sections/en/6-conclusion.tex -- summary, limitations (one per boundary row), outlook.
+\section{Conclusions}\label{sec:conclusion}
+This paper decomposed the fluid gap of the multiplicity flexible job-shop scheduling problem exactly into a rounding loss
+and a sequencing residual, and built an evolutionary search around that identity: a quota chromosome whose dimension is
+fixed by the type structure, a ranker scoped to the residual with a bound-preserving output, and a safeguarded preselection
+under exact decoding. \pending{On the fixed design set, the public benchmark and the extrapolation tier, the method reached
+gaps no worse than the strongest baseline in each family within the same wall clock, with fewer exact decodings, and the
+rounding gap followed the sign predicted by the theory.}
+
+The study has the following limitations, each tied to a boundary of the design. The instance family fixes $R = 8$ job types
+and $m = 10$ machines with $\bar N \le 50$; extension in the number of types is not evaluated. Setup times, transportation,
+breakdowns, dynamic arrivals and lot splitting are excluded (assumptions A4 and A5). The objective is the makespan only. The
+data are the parameter-table distribution and the Brandimarte benchmark, not factory data, and the Hurink sets are not
+included. Commercial solvers under long time limits and algorithms designed automatically by large language models are not
+compared. \pending{The learning-based baselines were reimplemented where official code was unavailable, and the
+reimplementation protocol is stated with the results.}
+
+Three directions follow. First, the same decomposition applies to any relaxation that is tight in aggregate, which suggests
+testing it on batch and lot-streaming variants. Second, the ranker can be trained across type structures by sharing the
+quotient-graph encoder. Third, the safeguarded union can carry other candidate sources, such as exact small-neighbourhood
+searches, without changing the acceptance rule.

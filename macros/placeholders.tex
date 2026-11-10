@@ -1,0 +1,35 @@
+% macros/placeholders.tex -- placeholder and draft-stage macros shared by main.tex and main_zh.tex.
+% \bi{中文}{English} is defined by each root before this file is read: the Chinese root keeps the
+% first argument, the English root the second. Every shared file (tables/, appendix/, this file)
+% writes its visible text through \bi so that one source serves both manuscripts.
+\usepackage{xcolor}
+\definecolor{deepblue}{RGB}{0,64,128}
+\definecolor{phgray}{RGB}{120,120,120}
+\definecolor{warnbg}{RGB}{255,247,230}
+\definecolor{citered}{RGB}{160,30,30}
+% numeric placeholders: single value / mean +- std / expected-best (bold) slot
+\newcommand{\ph}{\textcolor{phgray}{--}}
+\newcommand{\phpm}{\textcolor{phgray}{$\text{--}\!\pm\!\text{--}$}}
+\newcommand{\phb}{\textcolor{phgray}{\textbf{--}}}
+% a claim that no experiment has judged yet
+\newcommand{\pending}[1]{#1\textsuperscript{\textcolor{deepblue}{[\bi{待裁决}{pending}]}}}
+% a citation whose entry has not been verified: never a fabricated bib key
+\newcommand{\citeneed}[1]{\textcolor{citered}{[\bi{待核实引文}{ref}: #1]}}
+% a boxed note that the draft stage must carry (title page, contribution list, experiments)
+\newcommand{\draftnote}[1]{%
+  \begin{center}\setlength{\fboxsep}{6pt}%
+  \colorbox{warnbg}{\parbox{0.93\linewidth}{\small\textbf{\bi{草稿提示：}{Draft note: }}#1}}%
+  \end{center}}
+% figure placeholder = the drawing brief handed to opt-paper-scifig
+% {content elements}{data source}{route and design width}{box height}
+\newcommand{\figplace}[4]{%
+  \begin{center}\setlength{\fboxsep}{6pt}%
+  \fbox{\parbox[c][#4][c]{0.9\linewidth}{%
+    \centering\small
+    {\bfseries\bi{【图形占位·待 opt-paper-scifig 生成】}{[Figure placeholder -- to be produced by opt-paper-scifig]}}\\[4pt]
+    \begin{minipage}{0.95\linewidth}\footnotesize\raggedright
+      \textbf{\bi{内容要素：}{Elements: }}#1\par
+      \textbf{\bi{数据来源：}{Data: }}#2\par
+      \textbf{\bi{生成路线：}{Route: }}#3
+    \end{minipage}}}%
+  \end{center}}
